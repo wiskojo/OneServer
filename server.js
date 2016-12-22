@@ -12,14 +12,23 @@ http.listen(port, function()
 
 io.on("connection", function(socket)
 {
-  clients.push(socket);
-  updateUserlist();
-  console.log("socket connection");
+
+  socket.on("initialize-connection", function(data)
+  {
+    socket.name = data.name;
+    socket.room = data.tab !== undefined ? data.tab.url : "/";
+    socket.join(socket.room);
+
+    clients.push(socket);
+
+    updateUserlist(socket);
+    console.log("socket-connection: " + socket.name + " in room " + socket.room);
+  });
 
   socket.on("disconnect", function(socket)
   {
     clients.splice(clients.indexOf(socket), 1);
-    updateUserlist();
+    updateUserlist(socket);
     console.log("socket disconnect");
   });
 
@@ -29,17 +38,37 @@ io.on("connection", function(socket)
     console.log("send-message: " + message.text);
   });
 
-  socket.on("change-name", function(name)
+  socket.on("tab-change", function(tab)
   {
-    socket.name = name;
-    updateUserlist();
+    let prevRoom = socket.room;
+
+    socket.leave(socket.room);
+    socket.room = tab !== undefined ? tab.url : "/";
+    socket.join(socket.room);
+
+    socket.emit("room-update", socket.room)
+    updateUserList(socket, prevRoom);
   });
+
 });
 
-function updateUserlist()
+function updateUserlist(socket, prevRoom)
 {
-  io.sockets.emit("userlist-update", clients.map((client) =>
+  if(prevRoom !== undefined)
   {
-    return client.name;
+    io.to(prevRoom).emit("userlist-update", clients.map((client) =>
+    {
+      if(client.room == socket.room)
+      {
+        return client.name;
+      }
+    }));
+  }
+  io.to(socket.room).emit("userlist-update", clients.map((client) =>
+  {
+    if(client.room == socket.room)
+    {
+      return client.name;
+    }
   }));
 }
