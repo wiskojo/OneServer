@@ -25,7 +25,7 @@ io.on("connection", function(socket)
     console.log("socket-connection: " + socket.name + " in room " + socket.room);
   });
 
-  socket.on("disconnect", function(socket)
+  socket.on("disconnect", function()
   {
     clients.splice(clients.indexOf(socket), 1);
     updateUserlist(socket);
@@ -40,14 +40,16 @@ io.on("connection", function(socket)
 
   socket.on("tab-change", function(tab)
   {
-    let prevRoom = socket.room;
+    console.log("Server handles tab-change event");
+    var prevRoom = socket.room;
 
     socket.leave(socket.room);
     socket.room = tab !== undefined ? tab.url : "/";
     socket.join(socket.room);
 
-    socket.emit("room-update", socket.room)
-    updateUserList(socket, prevRoom);
+    socket.emit("room-update", socket.room);
+    console.log("Room update of socket " + socket.name + " to " + socket.room);
+    updateUserlist(socket, prevRoom);
   });
 
 });
