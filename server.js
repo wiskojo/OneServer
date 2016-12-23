@@ -34,7 +34,7 @@ io.on("connection", function(socket)
 
   socket.on("send-message", function(message)
   {
-    io.sockets.emit("send-message", message);
+    io.to(socket.room).emit("send-message", message);
     console.log("send-message: " + message.text);
   });
 
