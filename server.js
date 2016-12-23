@@ -29,7 +29,7 @@ io.on("connection", function(socket)
   {
     clients.splice(clients.indexOf(socket), 1);
     updateUserlist(socket);
-    console.log("socket disconnect");
+    console.log("socket-disconnect: " + socket.name + " from room " + socket.room);
   });
 
   socket.on("send-message", function(message)
@@ -60,7 +60,7 @@ function updateUserlist(socket, prevRoom)
   {
     io.to(prevRoom).emit("userlist-update", clients.map((client) =>
     {
-      if(client.room == socket.room)
+      if(client.room == prevRoom)
       {
         return client.name;
       }
