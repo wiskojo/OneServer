@@ -12,18 +12,15 @@ http.listen(port, function()
 io.on("connection", function(socket)
 {
 
-  socket.on("initialize-connection", function(data)
-  {
-    // Initialize socket fields
-    socket.name = data.name;
-    socket.room = data.tab !== undefined ? data.tab.url : "/";
-    // Pushes socket into appropriate room
-    socket.join(socket.room);
+  // Initialize socket fields
+  socket.name = socket.handshake.query["user"];
+  socket.room = socket.handshake.query["room"];
+  // Pushes socket into appropriate room
+  socket.join(socket.room);
 
-    // Update userlist to every client in the socket's room
-    updateUserlist(socket);
-    console.log("socket-connection: " + socket.name + " in room " + socket.room);
-  });
+  // Update userlist to every client in the socket's room
+  updateUserlist(socket);
+  console.log("socket-connection: " + socket.name + " in room " + socket.room);
 
   socket.on("disconnect", function()
   {
