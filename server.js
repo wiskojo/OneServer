@@ -2,12 +2,11 @@ var app  = require('express')();
 var http = require('http').Server(app);
 var io   = require('socket.io')(http);
 
-var clients = [];
 var port = process.env.PORT || 3001;
 
 http.listen(port, function()
 {
-  console.log('listening on: ' + port);
+  console.log('Listening on: ' + port);
 });
 
 io.on("connection", function(socket)
@@ -15,40 +14,46 @@ io.on("connection", function(socket)
 
   socket.on("initialize-connection", function(data)
   {
+    // Initialize socket fields
     socket.name = data.name;
     socket.room = data.tab !== undefined ? data.tab.url : "/";
+    // Pushes socket into appropriate room
     socket.join(socket.room);
 
-    clients.push(socket);
-
+    // Update userlist to every client in the socket's room
     updateUserlist(socket);
     console.log("socket-connection: " + socket.name + " in room " + socket.room);
   });
 
   socket.on("disconnect", function()
   {
-    clients.splice(clients.indexOf(socket), 1);
+    // Update the userlist of every client in the socket's room pre-disconnect
     updateUserlist(socket);
     console.log("socket-disconnect: " + socket.name + " from room " + socket.room);
   });
 
   socket.on("send-message", function(message)
   {
+    // Emit message from socket to every client in the socket's
+    // room(including the socket itself)
     io.to(socket.room).emit("send-message", message);
     console.log("send-message: " + message.text);
   });
 
   socket.on("tab-change", function(tab)
   {
-    console.log("Server handles tab-change event");
     var prevRoom = socket.room;
 
+    // Socket popped from current room and pushed into new room
     socket.leave(socket.room);
     socket.room = tab !== undefined ? tab.url : "/";
     socket.join(socket.room);
 
+    // Room update event emitted to socket to update its state.room
     socket.emit("room-update", socket.room);
     console.log("Room update of socket " + socket.name + " to " + socket.room);
+    // Update userlist event fired to clients in the socket's
+    // previous and current room
     updateUserlist(socket, prevRoom);
   });
 
@@ -56,21 +61,27 @@ io.on("connection", function(socket)
 
 function updateUserlist(socket, prevRoom)
 {
-  if(prevRoom !== undefined)
+  var socketIds;
+  if(prevRoom !== undefined && io.sockets.adapter.rooms[prevRoom])
   {
-    io.to(prevRoom).emit("userlist-update", clients.map((client) =>
+    // Create an array of all socket IDs in prevRoom
+    socketIds = Object.keys(io.sockets.adapter.rooms[prevRoom].sockets);
+    // Emit userlist-update to prevRoom with names of all clients in prevRoom
+    io.to(prevRoom).emit("userlist-update",
+      socketIds.map((socketId) =>
     {
-      if(client.room == prevRoom)
-      {
-        return client.name;
-      }
+      return io.sockets.connected[socketId].name;
     }));
   }
-  io.to(socket.room).emit("userlist-update", clients.map((client) =>
+  else if(io.sockets.adapter.rooms[socket.room])
   {
-    if(client.room == socket.room)
+    // Create an array of all socket IDs in socket.room
+    socketIds = Object.keys(io.sockets.adapter.rooms[socket.room].sockets);
+    // Emit userlist-update to socket.room with names of all clients in socket.room
+    io.to(socket.room).emit("userlist-update",
+      socketIds.map((socketId) =>
     {
-      return client.name;
-    }
-  }));
+      return io.sockets.connected[socketId].name;
+    }));
+  }
 }
