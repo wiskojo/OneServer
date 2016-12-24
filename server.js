@@ -19,13 +19,13 @@ io.on("connection", function(socket)
   socket.join(socket.room);
 
   // Update userlist to every client in the socket's room
-  updateUserlist(socket);
+  updateUserlist(socket.room);
   console.log("socket-connection: " + socket.name + " in room " + socket.room);
 
   socket.on("disconnect", function()
   {
     // Update the userlist of every client in the socket's room pre-disconnect
-    updateUserlist(socket);
+    updateUserlist(socket.room);
     console.log("socket-disconnect: " + socket.name + " from room " + socket.room);
   });
 
@@ -51,31 +51,20 @@ io.on("connection", function(socket)
     console.log("Room update of socket " + socket.name + " to " + socket.room);
     // Update userlist event fired to clients in the socket's
     // previous and current room
-    updateUserlist(socket, prevRoom);
+    updateUserlist(prevRoom);
+    updateUserlist(socket.room);
   });
 
 });
 
-function updateUserlist(socket, prevRoom)
+function updateUserlist(room)
 {
-  var socketIds;
-  if(prevRoom !== undefined && io.sockets.adapter.rooms[prevRoom])
+  if(!(room == null || io.sockets.adapter.rooms[room] == null))
   {
-    // Create an array of all socket IDs in prevRoom
-    socketIds = Object.keys(io.sockets.adapter.rooms[prevRoom].sockets);
-    // Emit userlist-update to prevRoom with names of all clients in prevRoom
-    io.to(prevRoom).emit("userlist-update",
-      socketIds.map((socketId) =>
-    {
-      return io.sockets.connected[socketId].name;
-    }));
-  }
-  else if(io.sockets.adapter.rooms[socket.room])
-  {
-    // Create an array of all socket IDs in socket.room
-    socketIds = Object.keys(io.sockets.adapter.rooms[socket.room].sockets);
-    // Emit userlist-update to socket.room with names of all clients in socket.room
-    io.to(socket.room).emit("userlist-update",
+    // Create an array of all socket IDs in room
+    var socketIds = Object.keys(io.sockets.adapter.rooms[room].sockets);
+    // Emit userlist-update to room with names of all clients in room
+    io.to(room).emit("userlist-update",
       socketIds.map((socketId) =>
     {
       return io.sockets.connected[socketId].name;
